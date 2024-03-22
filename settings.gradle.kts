@@ -19,6 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HealthStats"
+rootProject.name = "RunBuddy"
 include(":app")
- 
