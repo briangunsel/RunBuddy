@@ -90,8 +90,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void updateSpeed() {
-        // Assuming a linear acceleration model, calculating speed based on the acceleration
-        float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
+\        float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
         currentSpeed += totalAcceleration * 0.1; // Integration of acceleration to calculate velocity (speed)
         // Show speed with a toast message, acknowledging limitations
         Toast.makeText(MainActivity.this, "Current Speed (may be inaccurate): " + currentSpeed + " m/s", Toast.LENGTH_SHORT).show();
