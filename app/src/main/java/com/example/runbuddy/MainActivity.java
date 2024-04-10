@@ -33,22 +33,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        if (sensorManager != null) {
-            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        }
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BODY_SENSORS}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
-        } else {
-            startAccelerometer();
-        }
-
-
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startNewRun();
+                if (binding.startRunButton.getText().toString().equals("Start Run")) {
+                    startNewRun();
+                    binding.startRunButton.setText("Stop Run");
+                } else {
+                    stopRun();
+                    binding.startRunButton.setText("Start Run");
+                }
             }
         });
     }
@@ -86,18 +80,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Not used in this example
+        // ...
     }
 
     private void updateSpeed() {
-\        float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
-        currentSpeed += totalAcceleration * 0.1; // Integration of acceleration to calculate velocity (speed)
-        // Show speed with a toast message, acknowledging limitations
+        float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
+        currentSpeed += (float) (totalAcceleration * 0.1);
         Toast.makeText(MainActivity.this, "Current Speed (may be inaccurate): " + currentSpeed + " m/s", Toast.LENGTH_SHORT).show();
     }
 
     private void startNewRun() {
-        // Implement your logic to start a new run here, considering the limitations of accelerometer for distance
-        Toast.makeText(this, "New run started. Remember, speed readings may not be accurate.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "New run started.", Toast.LENGTH_SHORT).show();
+
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BODY_SENSORS}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
+        } else {
+            startAccelerometer();
+        }
     }
+
+    private void stopRun() {
+        Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
+
+        currentSpeed = 0.0f;
+
+        // Additional functionalities here, such as:
+        // - Displaying total distance or time elapsed (requires additional logic)
+        // - Storing run data for later access
+    }
+
 }
