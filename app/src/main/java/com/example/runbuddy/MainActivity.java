@@ -1,3 +1,5 @@
+package com.example.runbuddy;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -36,12 +38,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
 
-        // Check and request accelerometer permissions if not granted
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SENSOR_DATA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SENSOR_DATA}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BODY_SENSORS}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
         } else {
             startAccelerometer();
         }
+
 
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -50,6 +52,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
     }
+
+    private void startAccelerometer() {
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
 
     @Override
     protected void onResume() {
@@ -84,11 +93,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Assuming a linear acceleration model, calculating speed based on the acceleration
         float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
         currentSpeed += totalAcceleration * 0.1; // Integration of acceleration to calculate velocity (speed)
-        Toast.makeText(MainActivity.this, "Current Speed: " + currentSpeed + " m/s", Toast.LENGTH_SHORT).show();
+        // Show speed with a toast message, acknowledging limitations
+        Toast.makeText(MainActivity.this, "Current Speed (may be inaccurate): " + currentSpeed + " m/s", Toast.LENGTH_SHORT).show();
     }
 
     private void startNewRun() {
-        // Implement your logic to start a new run here
-        Toast.makeText(this, "New run started", Toast.LENGTH_SHORT).show();
+        // Implement your logic to start a new run here, considering the limitations of accelerometer for distance
+        Toast.makeText(this, "New run started. Remember, speed readings may not be accurate.", Toast.LENGTH_SHORT).show();
     }
 }
