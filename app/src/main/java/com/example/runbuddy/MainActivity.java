@@ -18,9 +18,7 @@ import androidx.core.content.ContextCompat;
 import com.example.runbuddy.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
-
     private static final int ACCELEROMETER_PERMISSION_REQUEST_CODE = 1002;
-
     private ActivityMainBinding binding;
     private SensorManager sensorManager;
     private Sensor accelerometer;
@@ -36,13 +34,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (binding.startRunButton.getText().toString().equals("Start Run")) {
-                    startNewRun();
-                    binding.startRunButton.setText("Stop Run");
-                } else {
-                    stopRun();
-                    binding.startRunButton.setText("Start Run");
-                }
+                binding.startRunButton.setVisibility(View.GONE);
+                binding.pauseRunButton.setVisibility(View.VISIBLE);
+                binding.endRunButton.setVisibility(View.VISIBLE);
+
+                startNewRun();
+            }
+        });
+
+        binding.pauseRunButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                binding.startRunButton.setVisibility(View.GONE);
+                binding.pauseRunButton.setVisibility(View.GONE);
+                binding.endRunButton.setVisibility(View.VISIBLE);
+                binding.resumeRunButton.setVisibility(View.VISIBLE);
+
+                onPause();
+            }
+        });
+
+        binding.endRunButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                binding.startRunButton.setVisibility(View.VISIBLE);
+                binding.pauseRunButton.setVisibility(View.GONE);
+                binding.endRunButton.setVisibility(View.GONE);
+
+                stopRun();
+            }
+        });
+
+        binding.resumeRunButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onResume();
             }
         });
     }
@@ -53,9 +79,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-
     @Override
     protected void onResume() {
+        Toast.makeText(MainActivity.this, "Run Resumed", Toast.LENGTH_SHORT).show();
+
         super.onResume();
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
@@ -64,6 +91,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     protected void onPause() {
+        Toast.makeText(MainActivity.this, "Run Paused", Toast.LENGTH_SHORT).show();
+
         super.onPause();
         if (accelerometer != null) {
             sensorManager.unregisterListener(this);
@@ -100,21 +129,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BODY_SENSORS}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
         } else {
-            startAccelerometer();
+            // Permission granted, proceed with starting the run
+            startAccelerometer(); // Moved after permission check
         }
     }
 
+
     private void stopRun() {
         Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
+
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
 
         currentSpeed = 0.0f;
-
-        // Additional functionalities here, such as:
-        // - Displaying total distance or time elapsed (requires additional logic)
-        // - Storing run data for later access
     }
-
 }
