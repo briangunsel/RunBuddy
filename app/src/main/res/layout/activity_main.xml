@@ -41,11 +41,12 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="parent" />
 
+    <!-- Resume Run Button -->
     <Button
         android:id="@+id/resumeRunButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
+        android:layout_marginTop="-450dp"
         android:text="@string/resume_run"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"

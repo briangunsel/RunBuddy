@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.startRunButton.setVisibility(View.VISIBLE);
                 binding.pauseRunButton.setVisibility(View.GONE);
                 binding.endRunButton.setVisibility(View.GONE);
+                binding.resumeRunButton.setVisibility(View.GONE);
 
                 stopRun();
             }
@@ -68,6 +69,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         binding.resumeRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                binding.startRunButton.setVisibility(View.GONE);
+                binding.pauseRunButton.setVisibility(View.VISIBLE);
+                binding.endRunButton.setVisibility(View.VISIBLE);
+                binding.resumeRunButton.setVisibility(View.GONE);
+
                 onResume();
             }
         });
@@ -129,8 +135,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BODY_SENSORS}, ACCELEROMETER_PERMISSION_REQUEST_CODE);
         } else {
-            // Permission granted, proceed with starting the run
-            startAccelerometer(); // Moved after permission check
+            startAccelerometer();
         }
     }
 
