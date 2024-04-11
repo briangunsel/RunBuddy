@@ -1,6 +1,7 @@
 package com.example.runbuddy;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -9,6 +10,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,6 +26,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor accelerometer;
     private float[] acceleration = new float[3];
     private float currentSpeed = 0.0f;
+    private long lastUpdate = 0;
+    private float lastSpeed = 0.0f;
+    private boolean runActive = false;
+    TextView speedTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,13 +37,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        TextView speedTextView = findViewById(R.id.speedTextView);
+
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 binding.startRunButton.setVisibility(View.GONE);
                 binding.pauseRunButton.setVisibility(View.VISIBLE);
                 binding.endRunButton.setVisibility(View.VISIBLE);
+                binding.speedTextView.setVisibility(View.VISIBLE);
 
+                Toast.makeText(MainActivity.this, "New run started.", Toast.LENGTH_SHORT).show();
+
+                runActive = true;
                 startNewRun();
             }
         });
@@ -49,7 +61,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.pauseRunButton.setVisibility(View.GONE);
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.VISIBLE);
+                binding.speedTextView.setVisibility(View.GONE);
 
+                Toast.makeText(MainActivity.this, "Run paused.", Toast.LENGTH_SHORT).show();
+
+                runActive = false;
                 onPause();
             }
         });
@@ -61,7 +77,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.pauseRunButton.setVisibility(View.GONE);
                 binding.endRunButton.setVisibility(View.GONE);
                 binding.resumeRunButton.setVisibility(View.GONE);
+                binding.speedTextView.setVisibility(View.GONE);
 
+                Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
+
+                runActive = false;
                 stopRun();
             }
         });
@@ -73,34 +93,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.pauseRunButton.setVisibility(View.VISIBLE);
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.GONE);
+                binding.speedTextView.setVisibility(View.VISIBLE);
 
+                Toast.makeText(MainActivity.this, "Run resumed.", Toast.LENGTH_SHORT).show();
+
+                runActive = true;
                 onResume();
             }
         });
     }
 
     private void startAccelerometer() {
-        if (accelerometer != null) {
+        if (accelerometer != null && runActive) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         }
     }
 
     @Override
     protected void onResume() {
-        Toast.makeText(MainActivity.this, "Run Resumed", Toast.LENGTH_SHORT).show();
-
         super.onResume();
-        if (accelerometer != null) {
+        if (runActive && accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         }
     }
 
     @Override
     protected void onPause() {
-        Toast.makeText(MainActivity.this, "Run Paused", Toast.LENGTH_SHORT).show();
-
         super.onPause();
-        if (accelerometer != null) {
+        if (runActive) {
             sensorManager.unregisterListener(this);
         }
     }
@@ -118,15 +138,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
+    @SuppressLint("SetTextI18n")
     private void updateSpeed() {
-        float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
-        currentSpeed += (float) (totalAcceleration * 0.1);
-        Toast.makeText(MainActivity.this, "Current Speed (may be inaccurate): " + currentSpeed + " m/s", Toast.LENGTH_SHORT).show();
+        if(runActive) {
+            long now = System.currentTimeMillis();
+            float timeDelta = (now - lastUpdate) / 1000.0f;
+
+            float totalAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
+
+            float newSpeed = lastSpeed + (totalAcceleration * timeDelta);
+
+            lastSpeed = newSpeed;
+            lastUpdate = now;
+
+            Toast.makeText(MainActivity.this, "Current Speed: " + newSpeed + " m/s", Toast.LENGTH_SHORT).show();
+            // speedTextView.setText("Current Speed: " + newSpeed + " m/s");
+        }
     }
 
     private void startNewRun() {
-        Toast.makeText(this, "New run started.", Toast.LENGTH_SHORT).show();
-
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -141,12 +171,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     private void stopRun() {
-        Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
-
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
 
         currentSpeed = 0.0f;
+        lastSpeed = 0.0f;
+        lastUpdate = 0;
     }
+
 }

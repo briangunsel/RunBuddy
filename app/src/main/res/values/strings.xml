@@ -9,4 +9,5 @@
     <string name="pause_run">Pause Run</string>
     <string name="end_run">End Run</string>
     <string name="resume_run">Resume Run</string>
+    <string name="current_speed">Current Speed:</string>
 </resources>
