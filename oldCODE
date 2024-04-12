@@ -25,11 +25,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private float[] acceleration = new float[3];
+    private float peakAcceleration = 0.0f; // Stores the peak acceleration
+    private int peakCount = 0; // Counts the number of peaks
+    private long startTime = 0; // Time when running started
     private float currentSpeed = 0.0f;
     private long lastUpdate = 0;
-    private float lastSpeed = 0.0f;
     private boolean runActive = false;
     TextView speedTextView;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +109,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void startAccelerometer() {
         if (accelerometer != null && runActive) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            startTime = System.currentTimeMillis();
+            peakCount = 0;
+            peakAcceleration = 0.0f;
         }
     }
 
@@ -129,6 +135,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             acceleration = event.values;
+            float currentAcceleration = (float) Math.sqrt(acceleration[0] * acceleration[0] + acceleration[1] * acceleration[1] + acceleration[2] * acceleration[2]);
+
+            // Detect peak acceleration (assuming positive for running)
+            if (currentAcceleration > peakAcceleration) {
+                peakAcceleration = currentAcceleration;
+            }
+
             updateSpeed();
         }
     }
@@ -138,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
+    /*
     @SuppressLint("SetTextI18n")
     private void updateSpeed() {
         if(runActive) {
@@ -150,8 +164,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             lastSpeed = newSpeed;
             lastUpdate = now;
+        }
+    }
+    */
 
-            speedTextView.setText("Current Speed: " + newSpeed + " m/s");
+    private void updateSpeed() {
+        if (runActive) {
+            long now = System.currentTimeMillis();
+            float timeDelta = (now - startTime) / 1000.0f;
+
+            // Estimate speed based on number of peaks and average peak value (adjust threshold as needed)
+            if (peakAcceleration > 7.0f) { // Adjust threshold based on testing
+                peakCount++;
+            }
+
+            if (peakCount > 0) {
+                currentSpeed = (peakCount * 0.5f) / timeDelta; // Adjust coefficient based on testing
+            } else {
+                currentSpeed = 0.0f;
+            }
+
+            lastUpdate = now;
+            speedTextView.setText("Current Speed: " + String.format("%.2f", currentSpeed) + " m/s");
         }
     }
 
@@ -175,7 +209,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         currentSpeed = 0.0f;
-        lastSpeed = 0.0f;
         lastUpdate = 0;
     }
 
