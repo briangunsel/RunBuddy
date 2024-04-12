@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        TextView speedTextView = findViewById(R.id.speedTextView);
+        speedTextView = findViewById(R.id.speedTextView);
 
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
+    /*
     @SuppressLint("SetTextI18n")
     private void updateSpeed() {
         if(runActive) {
@@ -150,9 +151,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             lastSpeed = newSpeed;
             lastUpdate = now;
+        }
+    }
+    */
 
-            Toast.makeText(MainActivity.this, "Current Speed: " + newSpeed + " m/s", Toast.LENGTH_SHORT).show();
-            // speedTextView.setText("Current Speed: " + newSpeed + " m/s");
+    private void updateSpeed() {
+        if (runActive) {
+            long now = System.currentTimeMillis();
+            float timeDelta = (now - lastUpdate) / 1000.0f;
+
+            // Remove the existing speed calculation logic (already removed)
+
+            lastUpdate = now;
+
+            Toast.makeText(MainActivity.this, "Current Speed: " + lastUpdate + " m/s", Toast.LENGTH_SHORT).show();
+            speedTextView.setText("Current Speed: " + lastUpdate + " m/s");
         }
     }
 
