@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
 
-                Toast.makeText(MainActivity.this, "New run started.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "New run started!", Toast.LENGTH_SHORT).show();
 
                 runActive = true;
                 startNewRun();
@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
 
-                Toast.makeText(MainActivity.this, "Run paused.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run paused!", Toast.LENGTH_SHORT).show();
 
                 runActive = false;
                 onPause();
@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
 
-                Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run stopped!", Toast.LENGTH_SHORT).show();
 
                 runActive = false;
                 stopRun();
@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.GONE);
 
-                Toast.makeText(MainActivity.this, "Run resumed.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run resumed!", Toast.LENGTH_SHORT).show();
 
                 runActive = true;
                 onResume();
@@ -153,7 +153,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint({"SetTextI18n", "DefaultLocale"})
     private void updateSpeed(SensorEvent event) {
         if (runActive) {
             if (lastTimestamp != 0) {
@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 final float[] linearAcceleration = new float[3];
                 System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
 
-                // Remove gravity from the accelerometer data
+                // remove gravity (low-pass filter)
                 final float alpha = 0.8f;
                 float gravity[] = new float[3];
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * linearAcceleration[0];
@@ -171,25 +171,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 linearAcceleration[1] = linearAcceleration[1] - gravity[1];
                 linearAcceleration[2] = linearAcceleration[2] - gravity[2];
 
-                // Reset velocity before integrating acceleration
                 velocity[0] = 0.0f;
                 velocity[1] = 0.0f;
                 velocity[2] = 0.0f;
 
-                // Integrate acceleration to get velocity
                 velocity[0] += linearAcceleration[0] * dt;
                 velocity[1] += linearAcceleration[1] * dt;
                 velocity[2] += linearAcceleration[2] * dt;
 
-                // Calculate speed based on updated velocity
-                float speed = (float) Math.sqrt(velocity[0] * velocity[0] +
-                        velocity[1] * velocity[1] +
-                        velocity[2] * velocity[2]);
+                float speed = (float) Math.sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2]);
 
-                // Update last timestamp
                 lastTimestamp = event.timestamp;
-
-                speedTextView.setText("Current Speed: " + speed + " m/s");
+                speedTextView.setText("Current Speed: " + String.format("%.2f", speed) + " m/s");
             } else {
                 lastTimestamp = event.timestamp;
             }
