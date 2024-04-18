@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    // Data processing when receiving updates from sensor.
     @Override
     public void onSensorChanged(SensorEvent event) {
         if(runActive) {
@@ -211,31 +212,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @SuppressLint("SetTextI18n")
     private void detectSteps(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float z = event.values[2];
+        if(runActive) {
+            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                float z = event.values[2]; // z used for step-like-movement
 
-            // Add current acceleration to buffer
-            accelerationBuffer.add(z);
+                // Add current acceleration to buffer
+                accelerationBuffer.add(z);
 
-            // Maintain buffer size
-            if (accelerationBuffer.size() > WINDOW_SIZE) {
-                accelerationBuffer.removeFirst();
+                // Maintain buffer size
+                if (accelerationBuffer.size() > WINDOW_SIZE) {
+                    accelerationBuffer.removeFirst();
+                }
+
+                // Calculate average acceleration
+                float avgAcceleration = 0.0f;
+                for (float acc : accelerationBuffer) {
+                    avgAcceleration += acc;
+                }
+                avgAcceleration /= accelerationBuffer.size();
+
+                // Check for steps
+                if (z > 0 && avgAcceleration > 0 && prevAcceleration <= 0) {
+                    currentSteps++;
+                }
+
+                prevAcceleration = avgAcceleration;
+                stepsViewText.setText("Steps: " + currentSteps);
             }
-
-            // Calculate average acceleration over the window
-            float avgAcceleration = 0.0f;
-            for (float acc : accelerationBuffer) {
-                avgAcceleration += acc;
-            }
-            avgAcceleration /= accelerationBuffer.size();
-
-            // Check for step using thresholding
-            if (z > 0 && avgAcceleration > 0 && prevAcceleration <= 0) {
-                currentSteps++;
-            }
-
-            prevAcceleration = avgAcceleration;
-            stepsViewText.setText("Steps: " + currentSteps);
         }
     }
 }
