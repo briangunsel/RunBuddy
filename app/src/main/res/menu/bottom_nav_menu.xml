@@ -3,7 +3,4 @@
     <item
         android:id="@+id/navigation_home"
         android:title="@string/menu_home" />
-    <item
-        android:id="@+id/navigation_runs"
-        android:title="@string/menu_runs" />
 </menu>

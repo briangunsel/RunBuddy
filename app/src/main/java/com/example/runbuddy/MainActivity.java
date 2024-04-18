@@ -29,16 +29,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private boolean runActive = false;
-    private static final int WINDOW_SIZE = 10; // Adjust window size as needed
+    private static final int WINDOW_SIZE = 10;
+    private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
     private LinkedList<Float> accelerationBuffer = new LinkedList<>();
     private float prevAcceleration = 0.0f;
     private static final float NS2S = 1.0f / 1000000000.0f;
     private long lastTimestamp = 0;
     private float[] velocity = new float[3];
     private int currentSteps = 0;
-
     TextView speedTextView;
     TextView stepsViewText;
+    TextView distanceViewText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         speedTextView = findViewById(R.id.speedTextView);
         stepsViewText = findViewById(R.id.stepsTextView);
+        distanceViewText = findViewById(R.id.distanceTextView);
 
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -56,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
+                binding.distanceTextView.setVisibility(View.VISIBLE);
 
                 Toast.makeText(MainActivity.this, "New run started!", Toast.LENGTH_SHORT).show();
 
@@ -73,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
+                binding.distanceTextView.setVisibility(View.GONE);
 
                 Toast.makeText(MainActivity.this, "Run paused!", Toast.LENGTH_SHORT).show();
 
@@ -90,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
+                binding.distanceTextView.setVisibility(View.GONE);
 
                 Toast.makeText(MainActivity.this, "Run stopped!", Toast.LENGTH_SHORT).show();
 
@@ -107,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
+                binding.distanceTextView.setVisibility(View.VISIBLE);
 
                 Toast.makeText(MainActivity.this, "Run resumed!", Toast.LENGTH_SHORT).show();
 
@@ -138,13 +145,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    // Data processing when receiving updates from sensor.
+    // Data processing when receiving updated data from sensor.
     @Override
     public void onSensorChanged(SensorEvent event) {
         if(runActive) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 updateSpeed(event);
                 detectSteps(event);
+                updateDistance(event);
             }
         }
     }
@@ -239,6 +247,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 prevAcceleration = avgAcceleration;
                 stepsViewText.setText("Steps: " + currentSteps);
             }
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateDistance(SensorEvent event) {
+        if(runActive) {
+            float distance = currentSteps * AVERAGE_STRIDE_LENGTH;
+
+            distanceViewText.setText("Distance: " + distance + "m");
         }
     }
 }
