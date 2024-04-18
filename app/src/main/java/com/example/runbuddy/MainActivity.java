@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.util.LinkedList;
+
 import com.example.runbuddy.databinding.ActivityMainBinding;
 
 import java.util.EventListener;
@@ -26,19 +28,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private ActivityMainBinding binding;
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    private float[] acceleration = new float[3];
-    private long lastUpdate = 0;
-    private float lastSpeed = 0.0f;
     private boolean runActive = false;
-    TextView speedTextView;
-    TextView stepsViewText;
-
+    private static final int WINDOW_SIZE = 10; // Adjust window size as needed
+    private LinkedList<Float> accelerationBuffer = new LinkedList<>();
+    private float prevAcceleration = 0.0f;
     private static final float NS2S = 1.0f / 1000000000.0f;
     private long lastTimestamp = 0;
     private float[] velocity = new float[3];
-    private static final float STEP_THRESHOLD = 2.0f;
     private int currentSteps = 0;
 
+    TextView speedTextView;
+    TextView stepsViewText;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
-                binding.stepsTextView.setVisibility(View.GONE);
+                binding.stepsTextView.setVisibility(View.VISIBLE);
 
                 Toast.makeText(MainActivity.this, "Run resumed!", Toast.LENGTH_SHORT).show();
 
@@ -207,9 +207,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
-
-        lastSpeed = 0.0f;
-        lastUpdate = 0;
     }
 
     @SuppressLint("SetTextI18n")
@@ -217,14 +214,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             float z = event.values[2];
 
-            if (Math.abs(z) > STEP_THRESHOLD) {
-                if (z > 0) {
-                    currentSteps++;
-                }
+            // Add current acceleration to buffer
+            accelerationBuffer.add(z);
+
+            // Maintain buffer size
+            if (accelerationBuffer.size() > WINDOW_SIZE) {
+                accelerationBuffer.removeFirst();
             }
 
+            // Calculate average acceleration over the window
+            float avgAcceleration = 0.0f;
+            for (float acc : accelerationBuffer) {
+                avgAcceleration += acc;
+            }
+            avgAcceleration /= accelerationBuffer.size();
+
+            // Check for step using thresholding
+            if (z > 0 && avgAcceleration > 0 && prevAcceleration <= 0) {
+                currentSteps++;
+            }
+
+            prevAcceleration = avgAcceleration;
             stepsViewText.setText("Steps: " + currentSteps);
         }
     }
-
 }
