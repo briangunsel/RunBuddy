@@ -20,12 +20,11 @@ import androidx.core.content.ContextCompat;
 import com.example.runbuddy.databinding.ActivityMainBinding;
 
 import java.util.EventListener;
-import java.util.Map;
-import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int ACCELEROMETER_PERMISSION_REQUEST_CODE = 1002;
     private ActivityMainBinding binding;
+    private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private float[] acceleration = new float[3];
@@ -34,11 +33,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean runActive = false;
     TextView speedTextView;
     TextView stepsViewText;
-    private Map<Integer, float[]> runs = new HashMap<>();
-    private int runIndex = 1;
-    private long speedSum = 0;
-    private long numSpeeds = 0;
-    private float avgSpeed;
+    TextView distanceViewText;
 
     private static final float NS2S = 1.0f / 1000000000.0f;
     private long lastTimestamp = 0;
@@ -54,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         speedTextView = findViewById(R.id.speedTextView);
         stepsViewText = findViewById(R.id.stepsTextView);
+        distanceViewText = findViewById(R.id.distanceTextView);
 
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -63,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
+                binding.distanceTextView.setVisibility(View.VISIBLE);
 
                 Toast.makeText(MainActivity.this, "New run started.", Toast.LENGTH_SHORT).show();
 
@@ -80,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
+                binding.distanceTextView.setVisibility(View.GONE);
 
                 Toast.makeText(MainActivity.this, "Run paused.", Toast.LENGTH_SHORT).show();
 
@@ -97,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
+                binding.distanceTextView.setVisibility(View.GONE);
 
                 Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
 
@@ -114,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.GONE);
+                binding.distanceTextView.setVisibility(View.VISIBLE);
 
                 Toast.makeText(MainActivity.this, "Run resumed.", Toast.LENGTH_SHORT).show();
 
@@ -151,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 updateSpeed(event);
                 detectSteps(event);
+                updateDistance(event);
             }
         }
     }
@@ -197,10 +198,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 lastTimestamp = event.timestamp;
 
                 speedTextView.setText("Current Speed: " + speed + " m/s");
-
-                //Update speed sum
-                speedSum += speed;
-                numSpeeds++;
             } else {
                 lastTimestamp = event.timestamp;
             }
@@ -226,15 +223,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             sensorManager.unregisterListener(this);
         }
 
-        // Add run to map
-        avgSpeed = (float)(speedSum/numSpeeds);
-        runs.put(runIndex, new float[]{avgSpeed, (float)currentSteps});
-        runIndex++;
-
-        //Reset speed sum
-        speedSum = 0;
-        numSpeeds = 0;
-
         lastSpeed = 0.0f;
         lastUpdate = 0;
     }
@@ -251,6 +239,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
 
             stepsViewText.setText("Steps: " + currentSteps);
+        }
+    }
+    @SuppressLint("SetTextI18n")
+    private void updateDistance(SensorEvent event) {
+        if(runActive) {
+            float distance = currentSteps * AVERAGE_STRIDE_LENGTH;
+
+            distanceViewText.setText("Distance: " + distance + "m");
         }
     }
 

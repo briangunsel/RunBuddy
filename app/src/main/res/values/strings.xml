@@ -10,5 +10,6 @@
     <string name="end_run">End Run</string>
     <string name="resume_run">Resume Run</string>
     <string name="current_speed">Current Speed:</string>
+    <string name="distance">Distance</string>
     <string name="steps">Steps:</string>
 </resources>
