@@ -26,8 +26,12 @@ import java.util.EventListener;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int ACCELEROMETER_PERMISSION_REQUEST_CODE = 1002;
     private ActivityMainBinding binding;
+    private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
     private SensorManager sensorManager;
     private Sensor accelerometer;
+    private float[] acceleration = new float[3];
+    private long lastUpdate = 0;
+    private float lastSpeed = 0.0f;
     private boolean runActive = false;
     private static final int WINDOW_SIZE = 10;
     private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
@@ -36,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final float NS2S = 1.0f / 1000000000.0f;
     private long lastTimestamp = 0;
     private float[] velocity = new float[3];
+    private static final float STEP_THRESHOLD = 2.0f;
     private int currentSteps = 0;
     TextView speedTextView;
     TextView stepsViewText;
@@ -162,24 +167,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
-    @SuppressLint({"SetTextI18n", "DefaultLocale"})
+    @SuppressLint("SetTextI18n")
     private void updateSpeed(SensorEvent event) {
         if (runActive) {
             if (lastTimestamp != 0) {
                 final float dt = (event.timestamp - lastTimestamp) * NS2S;
                 final float[] linearAcceleration = new float[3];
-                System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
-
-                // remove gravity (low-pass filter)
                 final float alpha = 0.8f;
                 float gravity[] = new float[3];
+                System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
+              
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * linearAcceleration[0];
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * linearAcceleration[1];
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * linearAcceleration[2];
                 linearAcceleration[0] = linearAcceleration[0] - gravity[0];
                 linearAcceleration[1] = linearAcceleration[1] - gravity[1];
                 linearAcceleration[2] = linearAcceleration[2] - gravity[2];
-
+              
                 velocity[0] = 0.0f;
                 velocity[1] = 0.0f;
                 velocity[2] = 0.0f;
@@ -188,10 +192,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 velocity[1] += linearAcceleration[1] * dt;
                 velocity[2] += linearAcceleration[2] * dt;
 
-                float speed = (float) Math.sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2]);
+                // Calculate speed based on updated velocity
+                float speed = (float) Math.sqrt(velocity[0] * velocity[0] +
+                        velocity[1] * velocity[1] +
+                        velocity[2] * velocity[2]);
 
+                // Update last timestamp
                 lastTimestamp = event.timestamp;
-                speedTextView.setText("Current Speed: " + String.format("%.2f", speed) + " m/s");
+                speedTextView.setText("Current Speed: " + speed + " m/s");
             } else {
                 lastTimestamp = event.timestamp;
             }
@@ -216,40 +224,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
+      
+        lastSpeed = 0.0f;
+        lastUpdate = 0;
     }
 
     @SuppressLint("SetTextI18n")
     private void detectSteps(SensorEvent event) {
-        if(runActive) {
-            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                float z = event.values[2]; // z used for step-like-movement
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float z = event.values[2];
 
-                // Add current acceleration to buffer
-                accelerationBuffer.add(z);
-
-                // Maintain buffer size
-                if (accelerationBuffer.size() > WINDOW_SIZE) {
-                    accelerationBuffer.removeFirst();
-                }
-
-                // Calculate average acceleration
-                float avgAcceleration = 0.0f;
-                for (float acc : accelerationBuffer) {
-                    avgAcceleration += acc;
-                }
-                avgAcceleration /= accelerationBuffer.size();
-
-                // Check for steps
-                if (z > 0 && avgAcceleration > 0 && prevAcceleration <= 0) {
+            if (Math.abs(z) > STEP_THRESHOLD) {
+                if (z > 0) {
                     currentSteps++;
                 }
-
-                prevAcceleration = avgAcceleration;
-                stepsViewText.setText("Steps: " + currentSteps);
             }
+
+            stepsViewText.setText("Steps: " + currentSteps);
         }
     }
-
+  
     @SuppressLint("SetTextI18n")
     private void updateDistance(SensorEvent event) {
         if(runActive) {
