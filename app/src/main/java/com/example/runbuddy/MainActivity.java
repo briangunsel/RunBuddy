@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.util.LinkedList;
+
 import com.example.runbuddy.databinding.ActivityMainBinding;
 
 import java.util.EventListener;
@@ -31,15 +33,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private long lastUpdate = 0;
     private float lastSpeed = 0.0f;
     private boolean runActive = false;
-    TextView speedTextView;
-    TextView stepsViewText;
-    TextView distanceViewText;
-
+    private static final int WINDOW_SIZE = 10;
+    private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
+    private LinkedList<Float> accelerationBuffer = new LinkedList<>();
+    private float prevAcceleration = 0.0f;
     private static final float NS2S = 1.0f / 1000000000.0f;
     private long lastTimestamp = 0;
     private float[] velocity = new float[3];
     private static final float STEP_THRESHOLD = 2.0f;
     private int currentSteps = 0;
+    TextView speedTextView;
+    TextView stepsViewText;
+    TextView distanceViewText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.stepsTextView.setVisibility(View.VISIBLE);
                 binding.distanceTextView.setVisibility(View.VISIBLE);
 
-                Toast.makeText(MainActivity.this, "New run started.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "New run started!", Toast.LENGTH_SHORT).show();
 
                 runActive = true;
                 startNewRun();
@@ -79,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.stepsTextView.setVisibility(View.GONE);
                 binding.distanceTextView.setVisibility(View.GONE);
 
-                Toast.makeText(MainActivity.this, "Run paused.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run paused!", Toast.LENGTH_SHORT).show();
 
                 runActive = false;
                 onPause();
@@ -97,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.stepsTextView.setVisibility(View.GONE);
                 binding.distanceTextView.setVisibility(View.GONE);
 
-                Toast.makeText(MainActivity.this, "Run stopped.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run stopped!", Toast.LENGTH_SHORT).show();
 
                 runActive = false;
                 stopRun();
@@ -112,10 +117,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
-                binding.stepsTextView.setVisibility(View.GONE);
+                binding.stepsTextView.setVisibility(View.VISIBLE);
                 binding.distanceTextView.setVisibility(View.VISIBLE);
 
-                Toast.makeText(MainActivity.this, "Run resumed.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Run resumed!", Toast.LENGTH_SHORT).show();
 
                 runActive = true;
                 onResume();
@@ -145,6 +150,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    // Data processing when receiving updated data from sensor.
     @Override
     public void onSensorChanged(SensorEvent event) {
         if(runActive) {
@@ -167,24 +173,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (lastTimestamp != 0) {
                 final float dt = (event.timestamp - lastTimestamp) * NS2S;
                 final float[] linearAcceleration = new float[3];
-                System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
-
-                // Remove gravity from the accelerometer data
                 final float alpha = 0.8f;
                 float gravity[] = new float[3];
+                System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
+              
                 gravity[0] = alpha * gravity[0] + (1 - alpha) * linearAcceleration[0];
                 gravity[1] = alpha * gravity[1] + (1 - alpha) * linearAcceleration[1];
                 gravity[2] = alpha * gravity[2] + (1 - alpha) * linearAcceleration[2];
                 linearAcceleration[0] = linearAcceleration[0] - gravity[0];
                 linearAcceleration[1] = linearAcceleration[1] - gravity[1];
                 linearAcceleration[2] = linearAcceleration[2] - gravity[2];
-
-                // Reset velocity before integrating acceleration
+              
                 velocity[0] = 0.0f;
                 velocity[1] = 0.0f;
                 velocity[2] = 0.0f;
 
-                // Integrate acceleration to get velocity
                 velocity[0] += linearAcceleration[0] * dt;
                 velocity[1] += linearAcceleration[1] * dt;
                 velocity[2] += linearAcceleration[2] * dt;
@@ -196,7 +199,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 // Update last timestamp
                 lastTimestamp = event.timestamp;
-
                 speedTextView.setText("Current Speed: " + speed + " m/s");
             } else {
                 lastTimestamp = event.timestamp;
@@ -222,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
-
+      
         lastSpeed = 0.0f;
         lastUpdate = 0;
     }
@@ -241,6 +243,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             stepsViewText.setText("Steps: " + currentSteps);
         }
     }
+  
     @SuppressLint("SetTextI18n")
     private void updateDistance(SensorEvent event) {
         if(runActive) {
@@ -249,5 +252,4 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             distanceViewText.setText("Distance: " + distance + "m");
         }
     }
-
 }
