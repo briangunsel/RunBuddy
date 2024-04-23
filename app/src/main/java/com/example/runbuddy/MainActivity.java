@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.sql.SQLOutput;
+import java.util.Arrays;
 import java.util.LinkedList;
 
 import com.example.runbuddy.databinding.ActivityMainBinding;
@@ -26,25 +28,27 @@ import java.util.EventListener;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int ACCELEROMETER_PERMISSION_REQUEST_CODE = 1002;
     private ActivityMainBinding binding;
-    private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    private float[] acceleration = new float[3];
-    private long lastUpdate = 0;
-    private float lastSpeed = 0.0f;
-    private boolean runActive = false;
-    private static final int WINDOW_SIZE = 10;
     private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
-    private LinkedList<Float> accelerationBuffer = new LinkedList<>();
-    private float prevAcceleration = 0.0f;
-    private static final float NS2S = 1.0f / 1000000000.0f;
-    private long lastTimestamp = 0;
-    private float[] velocity = new float[3];
-    private static final float STEP_THRESHOLD = 2.0f;
-    private int currentSteps = 0;
+    private boolean runActive = false;
+
+    private float[] acceleration = new float[3];
+    private long lastTimestamp = 0; // Store the timestamp of the last sensor update
+
+    private float[] velocity = new float[3]; // Store velocity values along x, y, and z axes
+
+    // For steps
+    private int stepCount = 0;
+    private double magPrev = 0;
+    boolean isPeak = false;
+    private float[] lastAcceleration = new float[3];
+
+    // Text views
     TextView speedTextView;
     TextView stepsViewText;
     TextView distanceViewText;
+    TextView accelerationViewText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         speedTextView = findViewById(R.id.speedTextView);
         stepsViewText = findViewById(R.id.stepsTextView);
         distanceViewText = findViewById(R.id.distanceTextView);
+        accelerationViewText = findViewById(R.id.accelerationTextView);
 
         binding.startRunButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -63,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.pauseRunButton.setVisibility(View.VISIBLE);
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
+                binding.accelerationTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
                 binding.distanceTextView.setVisibility(View.VISIBLE);
 
@@ -81,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.VISIBLE);
                 binding.speedTextView.setVisibility(View.GONE);
+                binding.accelerationTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
                 binding.distanceTextView.setVisibility(View.GONE);
 
@@ -99,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.GONE);
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.GONE);
+                binding.accelerationTextView.setVisibility(View.GONE);
                 binding.stepsTextView.setVisibility(View.GONE);
                 binding.distanceTextView.setVisibility(View.GONE);
 
@@ -117,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 binding.endRunButton.setVisibility(View.VISIBLE);
                 binding.resumeRunButton.setVisibility(View.GONE);
                 binding.speedTextView.setVisibility(View.VISIBLE);
+                binding.accelerationTextView.setVisibility(View.VISIBLE);
                 binding.stepsTextView.setVisibility(View.VISIBLE);
                 binding.distanceTextView.setVisibility(View.VISIBLE);
 
@@ -128,9 +137,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
     }
 
+    public void registerListener() {
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    public void unregisterListener() {
+        sensorManager.unregisterListener(this);
+    }
+
     private void startAccelerometer() {
         if (accelerometer != null && runActive) {
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            registerListener();
         }
     }
 
@@ -138,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         if (runActive && accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            registerListener();
         }
     }
 
@@ -146,19 +163,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onPause() {
         super.onPause();
         if (runActive) {
-            sensorManager.unregisterListener(this);
+            unregisterListener();
         }
     }
 
-    // Data processing when receiving updated data from sensor.
+    // Data pre-processing when receiving updated data from sensor
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if(runActive) {
-            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                updateSpeed(event);
-                detectSteps(event);
-                updateDistance(event);
-            }
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            updateAcceleration(event);
+            detectSteps(event);
+            updateDistance(event);
+            updateSpeed(event);
+
+            System.arraycopy(event.values, 0, lastAcceleration, 0, 3);
         }
     }
 
@@ -167,44 +185,58 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // ...
     }
 
+    /*
     @SuppressLint("SetTextI18n")
     private void updateSpeed(SensorEvent event) {
-        if (runActive) {
-            if (lastTimestamp != 0) {
-                final float dt = (event.timestamp - lastTimestamp) * NS2S;
-                final float[] linearAcceleration = new float[3];
-                final float alpha = 0.8f;
-                float gravity[] = new float[3];
-                System.arraycopy(event.values, 0, linearAcceleration, 0, 3);
-              
-                gravity[0] = alpha * gravity[0] + (1 - alpha) * linearAcceleration[0];
-                gravity[1] = alpha * gravity[1] + (1 - alpha) * linearAcceleration[1];
-                gravity[2] = alpha * gravity[2] + (1 - alpha) * linearAcceleration[2];
-                linearAcceleration[0] = linearAcceleration[0] - gravity[0];
-                linearAcceleration[1] = linearAcceleration[1] - gravity[1];
-                linearAcceleration[2] = linearAcceleration[2] - gravity[2];
-              
-                velocity[0] = 0.0f;
-                velocity[1] = 0.0f;
-                velocity[2] = 0.0f;
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            long currentTime = System.currentTimeMillis();
+            long elapsedTime = currentTime - lastTimestamp;
+            lastTimestamp = currentTime;
 
-                velocity[0] += linearAcceleration[0] * dt;
-                velocity[1] += linearAcceleration[1] * dt;
-                velocity[2] += linearAcceleration[2] * dt;
+            // Copy the accelerometer values to acceleration array
+            System.arraycopy(event.values, 0, acceleration, 0, 3);
 
-                // Calculate speed based on updated velocity
-                float speed = (float) Math.sqrt(velocity[0] * velocity[0] +
-                        velocity[1] * velocity[1] +
-                        velocity[2] * velocity[2]);
+            // Calculate magnitude of acceleration
+            double magnitude = Math.sqrt(Math.pow(acceleration[0], 2) + Math.pow(acceleration[1], 2) + Math.pow(acceleration[2], 2));
 
-                // Update last timestamp
-                lastTimestamp = event.timestamp;
-                speedTextView.setText("Current Speed: " + speed + " m/s");
-            } else {
-                lastTimestamp = event.timestamp;
+            // Integrate acceleration to obtain velocity using trapezoidal rule
+            // v(t) = v(t-1) + 0.5 * (a(t) + a(t-1)) * dt
+            for (int i = 0; i < 3; i++) {
+                velocity[i] += (float) (0.5 * (acceleration[i] + lastAcceleration[i]) * elapsedTime / 1000); // Convert ms to s
             }
+
+            // Calculate speed (magnitude of velocity)
+            double speed = Math.sqrt(Math.pow(velocity[0], 2) + Math.pow(velocity[1], 2) + Math.pow(velocity[2], 2));
+
+            speedTextView.setText("Speed: " + speed + " m/s");
+
+            // Update last acceleration values
+            System.arraycopy(acceleration, 0, lastAcceleration, 0, 3);
         }
     }
+    */
+
+    @SuppressLint("SetTextI18n")
+    private void updateSpeed(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            long currentTime = System.currentTimeMillis();
+            long elapsedTime = currentTime - lastTimestamp;
+            lastTimestamp = currentTime;
+
+            // Copy the accelerometer values to acceleration array
+            System.arraycopy(event.values, 0, acceleration, 0, 3);
+
+            // Calculate magnitude of acceleration
+            double magnitude = Math.sqrt(Math.pow(acceleration[0], 2) + Math.pow(acceleration[1], 2) + Math.pow(acceleration[2], 2));
+
+            // Calculate speed using simple equation: v(t) = v(t-1) + a * dt
+            double speed = magnitude * elapsedTime / 1000; // Convert ms to s
+
+            speedTextView.setText("Speed: " + speed + " m/s");
+        }
+    }
+
+
 
     private void startNewRun() {
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -221,35 +253,82 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     private void stopRun() {
-        if (sensorManager != null) {
-            sensorManager.unregisterListener(this);
-        }
-      
-        lastSpeed = 0.0f;
-        lastUpdate = 0;
+        unregisterListener();
     }
 
+    // detect steps using acceleration vector from accelerometer.
     @SuppressLint("SetTextI18n")
     private void detectSteps(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float z = event.values[2];
+        int step_threshold = 5; // decrease for faster pace, increase for slower pace.
 
-            if (Math.abs(z) > STEP_THRESHOLD) {
-                if (z > 0) {
-                    currentSteps++;
-                }
-            }
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
 
-            stepsViewText.setText("Steps: " + currentSteps);
+        double mag = Math.sqrt(x*x + y*y + z*z);
+        double magDelta = mag - magPrev;
+        magPrev = mag;
+
+        if(magDelta > step_threshold) {
+            stepCount++;
         }
+
+        stepsViewText.setText("Steps: " + stepCount);
+
+
+        // old version:
+        /*
+        float acceleration = (float) Math.sqrt(event.values[0] * event.values[0] + event.values[1] * event.values[1] + event.values[2] * event.values[2]);
+
+        if (acceleration > STEP_THRESHOLD && !isPeak) {
+            stepCount++;
+            isPeak = true;
+        }
+
+        if (acceleration < STEP_THRESHOLD) {
+            isPeak = false;
+        }
+
+        stepsViewText.setText("Steps: " + stepCount);
+        */
     }
-  
+
     @SuppressLint("SetTextI18n")
     private void updateDistance(SensorEvent event) {
         if(runActive) {
-            float distance = currentSteps * AVERAGE_STRIDE_LENGTH;
+            float distance = stepCount * AVERAGE_STRIDE_LENGTH;
 
             distanceViewText.setText("Distance: " + distance + "m");
         }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateAcceleration(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float[] rawAcceleration = event.values.clone();
+            float[] smoothedAcceleration = lowPassFilter(rawAcceleration);
+            float[] gravity = lowPassFilter(smoothedAcceleration);
+
+            // remove gravity
+            float[] linearAcceleration = new float[3];
+            for (int i = 0; i < 3; i++) {
+                linearAcceleration[i] = smoothedAcceleration[i] - gravity[i];
+            }
+
+            float totalLinearAcceleration = (float) Math.sqrt(linearAcceleration[0] * linearAcceleration[0] + linearAcceleration[1] * linearAcceleration[1] + linearAcceleration[2] * linearAcceleration[2]);
+
+            accelerationViewText.setText("Acceleration: " + totalLinearAcceleration + " m/s^2");
+        }
+    }
+
+    private float[] lowPassFilter(float[] input) {
+        float alpha = 0.8f;
+        float[] output = new float[3];
+        if (output == null) return input;
+
+        for (int i = 0; i < input.length; i++) {
+            output[i] = output[i] + alpha * (input[i] - output[i]);
+        }
+        return output;
     }
 }
