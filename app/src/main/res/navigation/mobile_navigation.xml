@@ -22,4 +22,11 @@
         android:name="com.example.runbuddy.ui.notifications.NotificationsFragment"
         android:label="@string/title_notifications"
         tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/navigation_runs"
+        android:name="com.example.runbuddy.ui.notifications.NotificationsFragment"
+        android:label="Runs"
+        tools:layout="@layout/runs" />
+
 </navigation>
