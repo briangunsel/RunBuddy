@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import com.example.runbuddy.databinding.ActivityMainBinding;
 
 import java.util.EventListener;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int ACCELEROMETER_PERMISSION_REQUEST_CODE = 1002;
@@ -46,7 +47,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView stepsViewText;
     TextView distanceViewText;
     TextView accelerationViewText;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
