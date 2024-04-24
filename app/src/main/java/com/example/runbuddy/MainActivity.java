@@ -13,6 +13,11 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.navigation.ui.NavigationUI;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -32,19 +37,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Sensor accelerometer;
     private static final float AVERAGE_STRIDE_LENGTH = 0.73f;
     private boolean runActive = false;
-
     private float[] acceleration = new float[3];
     private long lastTimestamp = 0; // Store the timestamp of the last sensor update
-
-    private float[] velocity = new float[3]; // Store velocity values along x, y, and z axes
-
-    // For steps
     private int stepCount = 0;
     private double magPrev = 0;
-    boolean isPeak = false;
     private float[] lastAcceleration = new float[3];
-
-    // Text views
     TextView speedTextView;
     TextView stepsViewText;
     TextView distanceViewText;
@@ -216,23 +213,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     */
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint({"SetTextI18n", "DefaultLocale"})
     private void updateSpeed(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             long currentTime = System.currentTimeMillis();
             long elapsedTime = currentTime - lastTimestamp;
             lastTimestamp = currentTime;
 
-            // Copy the accelerometer values to acceleration array
             System.arraycopy(event.values, 0, acceleration, 0, 3);
 
-            // Calculate magnitude of acceleration
             double magnitude = Math.sqrt(Math.pow(acceleration[0], 2) + Math.pow(acceleration[1], 2) + Math.pow(acceleration[2], 2));
-
-            // Calculate speed using simple equation: v(t) = v(t-1) + a * dt
             double speed = magnitude * elapsedTime / 1000; // Convert ms to s
 
-            speedTextView.setText("Speed: " + speed + " m/s");
+            speed = speed - 0.6;
+
+            speedTextView.setText(String.format("Speed: %.1f m/s", speed));
         }
     }
 
@@ -302,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint({"SetTextI18n", "DefaultLocale"})
     private void updateAcceleration(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             float[] rawAcceleration = event.values.clone();
@@ -317,12 +312,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             float totalLinearAcceleration = (float) Math.sqrt(linearAcceleration[0] * linearAcceleration[0] + linearAcceleration[1] * linearAcceleration[1] + linearAcceleration[2] * linearAcceleration[2]);
 
-            accelerationViewText.setText("Acceleration: " + totalLinearAcceleration + " m/s^2");
+            totalLinearAcceleration = (float) (totalLinearAcceleration - 1.5);
+
+            accelerationViewText.setText(String.format("Acceleration: %.1f m/s2", totalLinearAcceleration));
         }
     }
 
+    // helper function for acceleration calculations.
     private float[] lowPassFilter(float[] input) {
-        float alpha = 0.8f;
+        float alpha = 0.8f; // higher alpha = smoother output
         float[] output = new float[3];
         if (output == null) return input;
 
