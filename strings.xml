@@ -13,7 +13,4 @@
     <string name="distance">Distance</string>
     <string name="steps">Steps:</string>
     <string name="acceleration">Acceleration:</string>
-    <string name="runs">Runs</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="title_runs">Runs</string>
 </resources>
