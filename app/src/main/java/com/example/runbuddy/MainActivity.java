@@ -57,12 +57,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float[] acceleration = new float[3];
     private long lastTimestamp = 0; // Store the timestamp of the last sensor update
     private int stepCount = 0;
-    private static final float STEP_THRESHOLD = 9.9f;
+    private static final float STEP_THRESHOLD = 9.8f;
     private float[] lastAcceleration = new float[3];
     private Map<Integer, float[]> runs = new HashMap<>();
     private int runIndex = 0;
     private float speedSum = 0;
     private long numSpeeds = -5;
+    private long stepIndex = 0;
     private float avgSpeed;
     private float runDistance = 0;
     private NavController navController;
@@ -237,9 +238,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             System.arraycopy(event.values, 0, acceleration, 0, 3);
 
             double magnitude = Math.sqrt(Math.pow(acceleration[0], 2) + Math.pow(acceleration[1], 2) + Math.pow(acceleration[2], 2));
-            double speed = magnitude * elapsedTime / 1000; // Convert ms to s
+            double speed = magnitude * elapsedTime / 100;
 
-            speed = speed - 1.8;
+            speed = Math.abs(speed - 2.5);
 
             speed = Math.round(speed * 10.0) / 10.0;
             speedTextView.setText("Speed: " + speed + " m/s");
@@ -297,7 +298,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             if (Math.abs(z) > STEP_THRESHOLD) {
                 if (z > 0) {
-                    stepCount++;
+                    if (stepIndex > 7) {
+                        stepCount++;
+                        stepIndex = 0;
+                    }
+                    stepIndex++;
                 }
             }
 
